@@ -217,6 +217,17 @@ def act_save(a):
     for k in ("category", "language", "audio", "author"):
         if k in a:
             pack[k] = a[k]
+    if "uppercase" in a:
+        pack["uppercase"] = bool(a["uppercase"])
+        if pack["uppercase"]:
+            # back to all capitals: convert what is already there, or Generate would refuse it.
+            # (Switching off can't restore the original case of questions already converted;
+            # it applies to questions added from then on.)
+            U = content.upper
+            pack["standard"] = [[U(t) for t in q] for q in pack["standard"]]
+            pack["picture"] = [[q[0]] + [U(t) for t in q[1:]] for q in pack["picture"]]
+            pack["all_that_apply"] = [[U(q[0])] + [[U(t), ok] for t, ok in q[1:]] for q in pack["all_that_apply"]]
+            pack["point_stealer"] = [[U(q[0])] + q[1:] for q in pack["point_stealer"]]
     for players in ("4p", "8p"):
         k = "rounds" + players
         if k in a:

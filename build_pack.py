@@ -75,6 +75,9 @@ SUBJECT_ID = 115                       # question category item defined by quest
 INTROS = ["HERE'S A QUESTION ON %s. PLACE YOUR BETS!",
           "THIS ONE'S ON %s. WHAT WILL YOU BET?",
           "NEXT UP IS A QUESTION ON %s. HOW MUCH ARE YOU PREPARED TO RISK?"]
+INTROS_MIXED = ["Here's a question on %s. Place your bets!",
+                "This one's on %s. What will you bet?",
+                "Next up is a question on %s. How much are you prepared to risk?"]
 # round file -> (package number in roundpackages, round type tag) - retail order
 ROUNDS = [("stoptheclock", 1), ("passthebomb", 2), ("piefight", 3), ("highstakes", 4),
           ("pointstealer", 5), ("finalcountdown", 6), ("fastestfinger", 7), ("allthatapply", 8),
@@ -84,9 +87,13 @@ PIC_TAGS = [7, 4, 9]                   # media questions: Point Builder, High St
 DEFAULT_SLOTS = {"text": 60, "picture": 30, "all_that_apply": 20, "point_stealer": 20}
 
 
-def check(s, limit, what):
-    if len(s) > limit or s != s.upper():
-        raise ValueError("%s must be upper case and <= %d chars: %r" % (what, limit, s))
+def check(s, limit, what, uppercase=True):
+    """Length limit always; all capitals only for packs that ask for it (the default, as retail
+    packs are written) - a pack with "uppercase": false keeps its questions' own case."""
+    if len(s) > limit:
+        raise ValueError("%s must be <= %d chars: %r" % (what, limit, s))
+    if uppercase and s != s.upper():
+        raise ValueError("%s must be upper case (the pack has \"uppercase\": true): %r" % (what, s))
     return s
 
 
@@ -342,18 +349,20 @@ def build(content_path, overrides=None):
     name = C.get("round_name", "custom%d" % num).lower()
     category = C.get("category", "Knowledge")
     subject_key = C["subject_key"]
-    topic = C["topic"].upper()
+    topic = C["topic"].upper() if C.get("uppercase", True) else C["topic"]
     slots_cfg = dict(DEFAULT_SLOTS, **C.get("slots", {}))
     img_dir = os.path.join(os.path.dirname(os.path.abspath(content_path)), "images")
     images, missing_pictures = buzz_sdi.prepare_pictures(img_dir, C["images"], os.path.join(
         C.get("_out_dir") or os.path.join(HERE, "dlc_test"), "build_%04d" % int(C["pack_number"])))
     if missing_pictures:
         print("pictures not added yet (placeholder cards used): %s" % ", ".join(missing_pictures))
-    std = [[check(x[0], MAX_Q, "question")] + [check(a, MAX_A, "answer") for a in x[1:5]] for x in C["standard"]]
-    pic = [[x[0], check(x[1], MAX_Q, "question")] + [check(a, MAX_A, "answer") for a in x[2:6]] for x in C["picture"]]
-    ata = [[check(x[0], MAX_Q, "question")] + [(check(a, MAX_A, "answer"), bool(t)) for a, t in x[1:5]]
+    up = C.get("uppercase", True)
+    std = [[check(x[0], MAX_Q, "question", up)] + [check(a, MAX_A, "answer", up) for a in x[1:5]] for x in C["standard"]]
+    pic = [[x[0], check(x[1], MAX_Q, "question", up)] + [check(a, MAX_A, "answer", up) for a in x[2:6]]
+           for x in C["picture"]]
+    ata = [[check(x[0], MAX_Q, "question", up)] + [(check(a, MAX_A, "answer", up), bool(t)) for a, t in x[1:5]]
            for x in C["all_that_apply"]]
-    pst = [[check(x[0], MAX_Q, "question")] + [int(p) for p in x[1:5]] for x in C["point_stealer"]]
+    pst = [[check(x[0], MAX_Q, "question", up)] + [int(p) for p in x[1:5]] for x in C["point_stealer"]]
     files = {}
     lang = C.get("language", LANG).upper()
     if not (len(lang) == 3 and lang.isalpha()):
@@ -383,17 +392,19 @@ def build(content_path, overrides=None):
                 order.append(("standard", ti % len(std))); ti += 1
         if pi < nP:
             order.append(("picture", pi % len(pic))); pi += 1
+    # host intro lines in the pack's own case style
+    intros = INTROS if C.get("uppercase", True) else INTROS_MIXED
     qid_base = 20000
     content_base = 64000
     bank = []
     for k, (kind, b) in enumerate(order):
         if kind == "standard":
             q = std[b]
-            strs = [q[0], INTROS[k % 3] % topic] + q[1:5]
+            strs = [q[0], intros[k % 3] % topic] + q[1:5]
             tags = TEXT_TAGS
         else:
             q = pic[b]
-            strs = [q[1], INTROS[k % 3] % topic] + q[2:6]
+            strs = [q[1], intros[k % 3] % topic] + q[2:6]
             tags = PIC_TAGS
         bank.append({"kind": kind, "item": b, "strings": strs, "speech": speech_for((kind, b)),
                      "answers": [(0, 5), (1, 1), (2, 1), (3, 1)], "tags": tags,
