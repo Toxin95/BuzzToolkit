@@ -205,6 +205,7 @@ function render(){
     <div id="numwarn"></div>
     <label class="f">Description<input type="text" id="f-desc" value="${esc(P.description)}"></label>
     <label class="switch"><input type="checkbox" id="f-audio" ${P.audio?"checked":""}> Host reads the questions aloud <span class="muted" id="voicenote"></span></label>
+    <label class="switch"><input type="checkbox" id="f-upper" ${P.uppercase?"checked":""}> All capitals, like the game's own packs <span class="muted">${P.uppercase?"(switching off keeps the case of questions you add from then on)":"(questions keep their own case)"}</span></label>
   </section>
 
   <section class="step"><header><span class="num">2</span><h3>Questions</h3><span class="hint">Import files or online sources, or write your own</span></header>
@@ -238,6 +239,7 @@ function render(){
   $("#f-cat").onchange = e=>save({category:e.target.value});
   $("#f-lang").onchange = e=>save({language:e.target.value}).then(voiceNote);
   $("#f-audio").onchange = e=>save({audio:e.target.checked}).then(voiceNote);
+  $("#f-upper").onchange = e=>save({uppercase:e.target.checked}).then(render);
   $("#qtabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{qtab=b.dataset.t; render();});
   $("#preset").onchange = e=>{ const p=S.presets[e.target.value]; if(p){ save({rounds4p:p}).then(renderTracks); } };
   $("#gobtn").onclick = startGenerate;
