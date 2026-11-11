@@ -252,9 +252,13 @@ def _import(pid, sources, limit=None):
     kept, rejected = content.select(qs, uppercase=pack.get("uppercase", True), limit=limit)
     dup = [q for q in kept if content.key(q) in seen]
     kept = [q for q in kept if content.key(q) not in seen]
-    content.add_to_pack(pack, kept, os.path.dirname(ppath))
+    failed = []                                   # a broken picture skips its question, not the import
+    content.add_to_pack(pack, kept, os.path.dirname(ppath), failed)
     save(pid, pack)
     reasons = {}
+    if failed:
+        reasons["picture could not be loaded"] = len(failed)
+        kept = kept[:len(kept) - len(failed)]
     for _, why in rejected:
         for w in why:
             reasons[w] = reasons.get(w, 0) + 1

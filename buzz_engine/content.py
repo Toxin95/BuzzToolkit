@@ -223,9 +223,19 @@ def _image_file(src, images_dir, cache_dir=None):
         if re.match(r"https?://", str(src)):
             import urllib.request
             tmp = dst + ".download"
+            import time
+            import urllib.error
             req = urllib.request.Request(src, headers={"User-Agent": "BuzzPackEngine/1.0"})
-            with urllib.request.urlopen(req, timeout=30) as r, open(tmp, "wb") as f:
-                shutil.copyfileobj(r, f)
+            for attempt in range(4):               # image hosts (Wikimedia) answer 429 to bursts
+                try:
+                    with urllib.request.urlopen(req, timeout=30) as r, open(tmp, "wb") as f:
+                        shutil.copyfileobj(r, f)
+                    break
+                except urllib.error.HTTPError as e:
+                    if e.code not in (429, 503) or attempt == 3:
+                        raise
+                    wait = e.headers.get("Retry-After", "")
+                    time.sleep(min(int(wait), 30) if wait.isdigit() else 2 * 3 ** attempt)
             Image.open(tmp).convert("RGB").save(dst)
             os.remove(tmp)
         else:
@@ -233,8 +243,17 @@ def _image_file(src, images_dir, cache_dir=None):
     return stem
 
 
-def add_to_pack(pack, questions, pack_dir):
-    """Append normalised questions to a pack JSON dict (pictures copied into pack_dir/images)."""
+def add_to_pack(pack, questions, pack_dir, failed=None):
+    """Append normalised questions to a pack JSON dict (pictures copied into pack_dir/images).
+    failed: a list to collect (question, reason) for questions whose picture can't be loaded
+    (missing file, bad URL) - those are skipped. Without it, such a picture raises."""
+    if failed is not None:
+        for q in questions:
+            try:
+                add_to_pack(pack, [q], pack_dir)
+            except Exception as e:
+                failed.append((q, "picture could not be loaded: %s" % e))
+        return pack
     img_dir = os.path.join(pack_dir, "images")
 
     def image_no(src):

@@ -1,0 +1,8 @@
+type;question;correct;wrong1;wrong2;wrong3;image;category;difficulty
+standard;Quale pianeta è detto il pianeta rosso?;Marte;Venere;Giove;Mercurio;;Scienze;easy
+standard;Qual è la capitale dell'Australia?;Canberra;Sydney;Melbourne;Perth;;Geografia;medium
+picture;Chi ha dipinto questo quadro?;Leonardo da Vinci;Michelangelo;Raffaello;Donatello;https://upload.wikimedia.org/wikipedia/commons/thumb/e/ec/Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg/330px-Mona_Lisa%2C_by_Leonardo_da_Vinci%2C_from_C2RMF_retouched.jpg;Arte;easy
+picture;In quale città si trova questa torre?;Parigi;Londra;Roma;Madrid;https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg/330px-Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg;Geografia;easy
+all_that_apply;Quali di questi sono pianeti?;Marte|Venere|Saturno;Luna;;;;Scienze;easy
+all_that_apply;Quali di queste città sono in Italia?;Torino|Bari;Nizza;Lugano;;;Geografia;medium
+point_stealer;Quale di queste è la bandiera dell'Italia?;https://upload.wikimedia.org/wikipedia/en/thumb/0/03/Flag_of_Italy.svg/330px-Flag_of_Italy.svg.png;https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Flag_of_Mexico.svg/330px-Flag_of_Mexico.svg.png;https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Flag_of_Ireland.svg/330px-Flag_of_Ireland.svg.png;https://upload.wikimedia.org/wikipedia/en/thumb/c/c3/Flag_of_France.svg/330px-Flag_of_France.svg.png;;Geografia;easy

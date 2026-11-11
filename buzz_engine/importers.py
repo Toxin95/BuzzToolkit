@@ -8,7 +8,9 @@ source can be a file path, an http(s) URL, or an online source spec:
   triviaapi:limit=50&categories=history              The Trivia API (CC BY-NC 4.0: non-commercial)
 Files are recognised by extension and content:
   .csv/.tsv   header row; columns found by name: question, correct/answer, wrong1..3 /
-              incorrect_answers ("|"-separated), category, difficulty, image, type
+              incorrect_answers ("|"-separated), category, difficulty, image, type.
+              type all_that_apply: correct = every right answer "|"-separated, wrong = the rest;
+              type point_stealer: correct = the right picture, wrong1..3 = the other pictures
   .txt        Aiken (A./B./C./D. + "ANSWER: B"), OpenTriviaQA ("#Q", "^ answer", "A ..."),
               "Q:/A:/-" blocks (a .buzz.txt may start with #TITLE:/#CATEGORY:/... headers,
               see header()), or pipe lines
@@ -227,10 +229,32 @@ def _from_record(r):
         v = _pick(r, names)
         if v:
             out[k] = v
-    t = str(_pick(r, ["type", "kind"]) or "").lower()
-    if out.get("image") or t == "picture":
+    import unicodedata                         # "Più risposte giuste" -> "piurispostegiuste"
+    t = unicodedata.normalize("NFKD", str(_pick(r, ["type", "kind"]) or "")).encode("ascii", "ignore").decode()
+    t = re.sub(r"[^a-z]", "", t.lower())
+    kind = KIND_NAMES.get(t)
+    if kind == "all_that_apply":
+        # correct holds every right answer ("A|B"), the wrong columns the rest: 4 answers in all
+        right = [a.strip() for a in re.split(r"\s*\|\s*", str(c or "")) if a.strip()]
+        answers = right + [w for w in out["wrong"] if w]
+        out.update(kind=kind, answers=answers[:4], right=[i < len(right) for i in range(len(answers[:4]))])
+    elif kind == "point_stealer":
+        # the four answers are pictures: correct = the right picture, wrong1..3 = the others
+        out.update(kind=kind, images=[x for x in [c] + out["wrong"] if x], correct=0)
+    elif out.get("image") or kind == "picture":
         out["kind"] = "picture"
     return out
+
+
+# "type" column values (English, the Studio's Italian names, short forms) -> question kind
+KIND_NAMES = {
+    "standard": "standard", "normal": "standard", "normale": "standard",
+    "picture": "picture", "image": "picture", "immagine": "picture", "conimmagine": "picture",
+    "allthatapply": "all_that_apply", "multi": "all_that_apply", "multiple": "all_that_apply",
+    "piurispostegiuste": "all_that_apply", "multipla": "all_that_apply",
+    "pointstealer": "point_stealer", "pictureanswers": "point_stealer",
+    "risposteconimmagini": "point_stealer", "risposteimmagini": "point_stealer",
+}
 
 
 def parse_csv(text):
