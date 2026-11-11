@@ -1,4 +1,9 @@
-# Buzz Toolkit 0.1.5
+# Buzz Toolkit 0.2.0-alt
+
+> This is a fork of [Handylemons/BuzzToolkit](https://github.com/Handylemons/BuzzToolkit) with
+> packs that install on a real PS3, mixed-case questions, an Italian interface, question editing,
+> a Listen button for the host voice, and every question type importable from CSV.
+> See [RELEASE_NOTES.md](RELEASE_NOTES.md).
 
 Make your own quiz packs for **Buzz! Quiz World** (PS3, BCES00645) and host your own Buzz! online
 server, for playing on RPCS3 or a modded PS3.
@@ -103,7 +108,9 @@ You're ready to make packs. From now on, just double-click **Start Buzz Pack Stu
 3. **Questions**: drop in files (CSV, text, Moodle XML, Buzz online XML, JSON), pull from
    Open Trivia DB / OpenTriviaQA / The Trivia API, or write your own (picture questions and
    Point Stealer picture answers included). The app checks the game's limits
-   (93 characters per question, 30 per answer).
+   (93 characters per question, 30 per answer). Every question in the list can be edited (✎)
+   or played in the host's voice (🔊). A CSV can hold all four question types: see
+   `examples/sample.csv` and *How to write a CSV file* under the drop zone.
 4. **Rounds**: the running order: fixed rounds or random picks, as many as you like, then the
    Final Countdown. The **Question coverage** box underneath is only a check: it shows how many
    of your questions each round can use. You don't set those numbers; the game picks questions

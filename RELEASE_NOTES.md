@@ -1,3 +1,40 @@
+# Buzz Toolkit 0.2.0-alt
+
+**A fork of 0.1.5: packs install on a real PS3, questions can keep their own case, and the
+Studio speaks Italian, edits questions and lets you hear the host read them.**
+
+## Packs install on a real PS3
+* **Fixed: packs installed on a PS3 but the game never saw them** (or the install stopped with
+  error `80029563`). Packs are now built as debug packages, which the console's package installer
+  accepts and which create the DLC container the game looks for. RPCS3 installs them the same way.
+* Confirmed on HEN 3.6.0, firmware 4.93.1, BCES00644 update 01.02. Generate your packs again with
+  this version.
+
+## Questions in their own case
+* A pack can keep upper and lower case (**All capitals** switch in step 1). The game's own packs
+  are all capitals; that stays the default.
+
+## Studio
+* **Italian interface.** A language picker sits at the top of the sidebar; the Studio starts in
+  the browser's language. Translations are in `buzz_engine/studio_i18n.js`, keyed by the English
+  text, so another language is one more block. Round names and engine messages stay English.
+* **Listen (🔊).** Hear the host read the question you are writing, or any question in the list,
+  with the pack language's voice. The first line takes about 40 seconds while the voice loads; a
+  line already heard plays at once, and Generate reuses it instead of synthesising it again.
+* **Edit (✎).** Every question in the list can be changed in place, with the same checks as adding
+  one. A picture question can get a new picture; point-stealer pictures stay as they are.
+
+## CSV import
+* **Every question type from CSV.** The `type` column picks it: `standard`, `picture`,
+  `all_that_apply` (every right answer in `correct`, separated by `|`) or `point_stealer`
+  (the right picture in `correct`, the other three in `wrong1`-`wrong3`). The Studio's Italian
+  names work too.
+* **A broken picture skips only its question**, and the import summary counts it. Before, one bad
+  link stopped the whole import.
+* Image downloads retry when the host answers *too many requests* (Wikimedia does this to bursts).
+* `examples/sample.csv` shows every type; `examples/esempio.csv` is the Italian version. The
+  Studio explains the columns under *How to write a CSV file*.
+
 # Buzz Toolkit 0.1.5
 
 **Czech and Croatian packs now have a host voice, every language on the three discs can be
