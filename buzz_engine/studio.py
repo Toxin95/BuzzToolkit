@@ -298,6 +298,48 @@ def act_add(a):
     return project_view(a["id"])
 
 
+def act_edit(a):
+    """Change an existing question in place (same checks as adding one). Pictures stay unless a
+    picture question is given a new one; point-stealer pictures always stay (text only)."""
+    pack = load(a["id"])
+    kind, i = a["kind"], int(a["i"])
+    rows = pack[kind]
+    if not 0 <= i < len(rows):
+        raise ValueError("that question no longer exists")
+    row = rows[i]
+    q = {"kind": kind, "question": a["question"], "source": "manual"}
+    if kind in ("standard", "picture"):
+        q["correct"], q["wrong"] = a["answers"][0], a["answers"][1:4]
+        if kind == "picture":
+            q["image"] = save_upload(a["id"], a["image"]["name"], a["image"]["data"]) if a.get("image") else "(kept)"
+    elif kind == "all_that_apply":
+        q["answers"], q["right"] = a["answers"], a["right"]
+    elif kind == "point_stealer":
+        q["images"] = row[1:5]
+    q = content.normalise(q, pack.get("uppercase", True))
+    why = content.problems(q)
+    texts = [r[1] if k == "picture" else r[0] for k in ("standard", "picture", "all_that_apply", "point_stealer")
+             for n, r in enumerate(pack[k]) if not (k == kind and n == i)]
+    if content.key(q) in {content.key({"question": t}) for t in texts}:
+        why.append("duplicate question")
+    if why:
+        raise ValueError("; ".join(why))
+    if kind == "standard":
+        rows[i] = [q["question"], q["correct"]] + q["wrong"][:3]
+    elif kind == "picture":
+        if a.get("image"):                     # new picture: add_to_pack copies it in, then move the row
+            content.add_to_pack(pack, [q], os.path.dirname(project_path(a["id"])))
+            rows[i] = rows.pop()
+        else:
+            rows[i] = [row[0], q["question"], q["correct"]] + q["wrong"][:3]
+    elif kind == "all_that_apply":
+        rows[i] = [q["question"]] + [[x, bool(r)] for x, r in zip(q["answers"], q["right"])]
+    else:
+        rows[i] = [q["question"]] + row[1:5]
+    save(a["id"], pack)
+    return project_view(a["id"])
+
+
 def act_delete(a):
     pack = load(a["id"])
     del pack[a["kind"]][int(a["i"])]
@@ -488,7 +530,7 @@ def act_setup_pc(a):
     return {"done": online.setup_pc(r, a.get("server_ip") or "127.0.0.1", bool(a.get("fps60", True)))}
 
 
-ACTIONS = {"new": act_new, "save": act_save, "import": act_import, "add": act_add, "delete": act_delete,
+ACTIONS = {"new": act_new, "save": act_save, "import": act_import, "add": act_add, "edit": act_edit, "delete": act_delete,
            "generate": act_generate, "install": act_install, "settings": act_settings, "hook": act_hook,
            "open": act_open, "opentdb": act_opentdb, "publish": act_publish, "server": act_server,
            "catalog": act_catalog, "setup_pc": act_setup_pc, "keys": act_keys, "ffmpeg": act_ffmpeg,
