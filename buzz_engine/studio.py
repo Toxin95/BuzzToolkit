@@ -327,6 +327,53 @@ def act_generate(a):
     return {"job": job}
 
 
+PREVIEWS = os.path.join(ROOT, "voice_cache", "preview")
+LISTEN_LOCK = threading.Lock()          # one voice model on the GPU at a time
+
+
+def act_listen(a):
+    """Host reads one question aloud, as the pack build would (same voice, same cache: a line
+    heard here is not synthesised again by Generate) -> job whose result is a WAV URL."""
+    import hashlib
+    import wave
+    import buzz_voice
+    import numpy as np
+    pack = load(a["id"])
+    text = (a.get("text") or "").strip()
+    if not text:
+        raise ValueError("write the question first")
+    lang = (a.get("language") or pack.get("language") or "GBR").upper()
+    cfg = voices.voice_config(lang, pack.get("voice"))
+    if not cfg:
+        raise ValueError("no %s host voice on this PC yet (train one with voice_trainer)" % lang)
+    line = cfg.get("say", {}).get(text) or buzz_voice.host_line(text, cfg.get("pronounce"))
+    job = "listen_%d" % int(time.time() * 1000)
+    JOBS[job] = {"log": [], "done": False, "result": None, "error": None}
+
+    def run():
+        j = JOBS[job]
+        try:
+            with LISTEN_LOCK:
+                j["log"].append("The host is reading: %s" % line)
+                x = buzz_voice.synthesize([line], cfg["engine"], cfg.get("speed", 1.0), cfg.get("clone"), cfg.get("vocab"))[0]
+                x = buzz_voice.prepare(x, cfg.get("warmth", 0.0))
+            os.makedirs(PREVIEWS, exist_ok=True)
+            name = hashlib.sha1(json.dumps([line, cfg]).encode()).hexdigest()[:16]
+            with wave.open(os.path.join(PREVIEWS, name + ".wav"), "wb") as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(buzz_voice.RATE)
+                w.writeframes(np.clip(np.rint(x), -32768, 32767).astype("<i2").tobytes())
+            j["result"] = {"audio": "/preview?name=" + name, "line": line, "voice": cfg["clone"].get("model") or cfg["engine"]}
+        except (Exception, SystemExit) as e:
+            j["error"] = str(e)
+            j["log"].append("FAILED: %s" % e)
+        j["done"] = True
+
+    threading.Thread(target=run, daemon=True).start()
+    return {"job": job}
+
+
 def act_install(a):
     r = settings().get("rpcs3")
     if not r:
@@ -445,7 +492,7 @@ ACTIONS = {"new": act_new, "save": act_save, "import": act_import, "add": act_ad
            "generate": act_generate, "install": act_install, "settings": act_settings, "hook": act_hook,
            "open": act_open, "opentdb": act_opentdb, "publish": act_publish, "server": act_server,
            "catalog": act_catalog, "setup_pc": act_setup_pc, "keys": act_keys, "ffmpeg": act_ffmpeg,
-           "update": act_update, "buzzers": act_buzzers}
+           "update": act_update, "buzzers": act_buzzers, "listen": act_listen}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -476,6 +523,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/img":
                 p = os.path.join(PROJECTS, q["id"], "images", re.sub(r"[^A-Za-z0-9_]", "", q["name"]) + ".png")
                 return self._send(200, open(p, "rb").read(), "image/png")
+            if u.path == "/preview":
+                p = os.path.join(PREVIEWS, re.sub(r"[^0-9a-f]", "", q["name"]) + ".wav")
+                return self._send(200, open(p, "rb").read(), "audio/wav")
             self._send(404, {"error": "not found"})
         except Exception as e:
             self._send(400, {"error": str(e)})
