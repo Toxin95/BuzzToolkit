@@ -556,6 +556,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if u.path in ("/", "/index.html"):
                 return self._send(200, open(os.path.join(HERE, "studio.html"), "rb").read(), "text/html; charset=utf-8")
+            if u.path == "/studio_i18n.js":
+                return self._send(200, open(os.path.join(HERE, "studio_i18n.js"), "rb").read(), "text/javascript; charset=utf-8")
             if u.path == "/api/state":
                 return self._send(200, state())
             if u.path == "/api/project":
